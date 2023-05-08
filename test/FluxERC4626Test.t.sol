@@ -2,6 +2,7 @@
 pragma solidity 0.8.18;
 
 import "erc4626-tests/ERC4626.test.sol";
+import "forge-std/Test.sol";
 
 // import {ERC20} from "solmate/tokens/ERC20.sol";
 
@@ -10,23 +11,26 @@ import { IComptroller } from "../src/vaults/utils/flux/IComptroller.sol";
 import { FluxERC4626Factory } from "../src/vaults/FluxERC4626Factory.sol";
 import { FluxERC4626Wrapper } from "../src/vaults/FluxERC4626Wrapper.sol";
 
-contract ERC4626StdTest is ERC4626Test {
+contract ERC4626StdTest is Test, ERC4626Test {
 
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public constant fUSDC = 0x465a5a630482f3abD6d3b84B39B29b07214d19e5;
     address public constant COMPTROLLER = 0x95Af143a021DF745bc78e845b54591C53a8B3A51;
     address public constant COMPOUND_ETHER = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
-    string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-    uint256 public constant BLOCK_NO = 17215000;
+    string constant MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
+    uint256 public constant BLOCK_NO = 16558812;
 
     IFERC20 public fToken;
     FluxERC4626Factory public factory;
     FluxERC4626Wrapper public fluxERC4626;
     
     function setUp() public override {
+        console.log("Hello");
         uint256 fork = vm.createFork(MAINNET_RPC_URL);
         vm.selectFork(fork);
         vm.rollFork(BLOCK_NO);
+
+        console.log("Hello 2");
 
         _underlying_ = USDC;
         fToken = IFERC20(fUSDC);

@@ -56,12 +56,12 @@ contract FluxERC4626Wrapper is ERC4626 {
     /// @notice The Flux comptroller contract
     IComptroller public immutable comptroller;
 
-    /// @notice Pointer to swapInfo
-    swapInfo public SwapInfo;
+    /// @notice Pointer to SwapInfo
+    SwapInfo public swapInfo;
 
     /// Compact struct to make two swaps (PancakeSwap on BSC)
     /// A => B (using pair1) then B => asset (of Wrapper) (using pair2)
-    struct swapInfo {
+    struct SwapInfo {
         address token;
         address pair1;
         address pair2;
@@ -97,9 +97,9 @@ contract FluxERC4626Wrapper is ERC4626 {
         address pair2
     ) external {
         require(msg.sender == manager, "onlyOwner");
-        SwapInfo = swapInfo(token, pair1, pair2);
-        ERC20(reward).approve(SwapInfo.pair1, type(uint256).max); /// max approve
-        ERC20(SwapInfo.token).approve(SwapInfo.pair2, type(uint256).max); /// max approve
+        swapInfo = SwapInfo(token, pair1, pair2);
+        ERC20(reward).approve(swapInfo.pair1, type(uint256).max); /// max approve
+        ERC20(swapInfo.token).approve(swapInfo.pair2, type(uint256).max); /// max approve
     }
 
     /// @notice Claims liquidity mining rewards from Flux and performs low-lvl swap with instant reinvesting
@@ -114,28 +114,28 @@ contract FluxERC4626Wrapper is ERC4626 {
         uint256 earned = ERC20(reward).balanceOf(address(this));
         address rewardToken = address(reward);
 
-        /// If only one swap needed (high liquidity pair) - set swapInfo.token0/token/pair2 to 0x
-        if (SwapInfo.token == address(asset)) {
+        /// If only one swap needed (high liquidity pair) - set SwapInfo.token0/token/pair2 to 0x
+        if (swapInfo.token == address(asset)) {
             DexSwap.swap(
                 earned, /// REWARDS amount to swap
                 rewardToken, // from REWARD (because of liquidity)
                 address(asset), /// to target underlying of this Vault ie USDC
-                SwapInfo.pair1 /// pairToken (pool)
+                swapInfo.pair1 /// pairToken (pool)
             );
             /// If two swaps needed
         } else {
             uint256 swapTokenAmount = DexSwap.swap(
                 earned, /// REWARDS amount to swap
                 rewardToken, /// fromToken REWARD
-                SwapInfo.token, /// to intermediary token with high liquidity (no direct pools)
-                SwapInfo.pair1 /// pairToken (pool)
+                swapInfo.token, /// to intermediary token with high liquidity (no direct pools)
+                swapInfo.pair1 /// pairToken (pool)
             );
 
             DexSwap.swap(
                 swapTokenAmount,
-                SwapInfo.token, // from received BUSD (because of liquidity)
+                swapInfo.token, // from received BUSD (because of liquidity)
                 address(asset), /// to target underlying of this Vault ie USDC
-                SwapInfo.pair2 /// pairToken (pool)
+                swapInfo.pair2 /// pairToken (pool)
             );
         }
 

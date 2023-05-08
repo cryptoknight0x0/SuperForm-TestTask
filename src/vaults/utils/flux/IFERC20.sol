@@ -34,10 +34,4 @@ abstract contract IFERC20 is ERC20 {
         view
         virtual
         returns (IInterestRateModel);
-
-    // function initialExchangeRateMantissa()
-    //     external
-    //     view
-    //     virtual
-    //     returns (uint256);
 }
