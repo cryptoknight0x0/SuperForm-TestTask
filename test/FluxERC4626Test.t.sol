@@ -32,7 +32,10 @@ contract ERC4626StdTest is ERC4626Test {
         fToken = IFERC20(fUSDC);
         factory = new FluxERC4626Factory(IComptroller(COMPTROLLER), COMPOUND_ETHER, msg.sender);
         fluxERC4626 = FluxERC4626Wrapper(address(factory.createERC4626(ERC20(_underlying_))));
-
+        _vault_ = address(fluxERC4626);
+        _delta_ = 0;
+        _vaultMayBeEmpty = false;
+        // _unlimitedAmount = false;
 
 
 
