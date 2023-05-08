@@ -8,6 +8,7 @@ import {IFERC20} from "./utils/flux/IFERC20.sol";
 import {FluxERC4626Wrapper} from "./FluxERC4626Wrapper.sol";
 import {IComptroller} from "./utils/flux/IComptroller.sol";
 import {ERC4626Factory} from "./utils/ERC4626Factory.sol";
+import "forge-std/console.sol";
 
 /// @title FluxERC4626Factory
 /// @notice Factory for creating FluxERC4626 contracts
@@ -18,6 +19,8 @@ contract FluxERC4626Factory is ERC4626Factory {
 
     /// @notice Thrown when trying to deploy an FluxERC4626 vault using an asset without a fToken
     error FluxERC4626Factory__fTokenNonexistent();
+    /// @notice Thrown when trying to set a variable to zero address
+    error ZeroAddressError();
 
     /// -----------------------------------------------------------------------
     /// Immutable params
@@ -47,6 +50,9 @@ contract FluxERC4626Factory is ERC4626Factory {
     /// -----------------------------------------------------------------------
 
     constructor(IComptroller comptroller_, address cEtherAddress_, address rewardRecipient_) {
+        if(cEtherAddress_ == address(0) || rewardRecipient_ == address(0)) {
+            revert ZeroAddressError();
+        }
         comptroller = comptroller_;
         fEtherAddress = cEtherAddress_;
         rewardRecipient = rewardRecipient_;
@@ -55,9 +61,11 @@ contract FluxERC4626Factory is ERC4626Factory {
         // initialize underlyingToFToken
         IFERC20[] memory allfTokens = comptroller_.getAllMarkets();
         uint256 numFTokens = allfTokens.length;
+        console.log("Length is", numFTokens);
         IFERC20 fToken;
         for (uint256 i; i < numFTokens;) {
             fToken = allfTokens[i];
+            console.log("F token is", address(fToken));
             if (address(fToken) != cEtherAddress_) {
                 underlyingToFToken[fToken.underlying()] = fToken;
             }

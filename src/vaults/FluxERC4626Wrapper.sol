@@ -31,6 +31,8 @@ contract FluxERC4626Wrapper is ERC4626 {
     /// @notice Thrown when a call to Flux returned an error.
     /// @param errorCode The error code returned by Flux
     error FluxERC4626__FluxError(uint256 errorCode);
+    /// @notice Thrown when trying to set a variable to zero address
+    error ZeroAddressError();
 
     /// -----------------------------------------------------------------------
     /// Constants
@@ -79,6 +81,9 @@ contract FluxERC4626Wrapper is ERC4626 {
         reward = reward_;
         fToken = fToken_;
         comptroller = comptroller_;
+        if(manager_ == address(0)) {
+            revert ZeroAddressError();
+        }
         manager = manager_;
     }
 
