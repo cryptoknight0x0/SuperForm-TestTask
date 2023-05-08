@@ -46,9 +46,9 @@ contract FluxERC4626Factory is ERC4626Factory {
     /// Constructor
     /// -----------------------------------------------------------------------
 
-    constructor(IComptroller comptroller_, address fEtherAddress_, address rewardRecipient_) {
+    constructor(IComptroller comptroller_, address cEtherAddress_, address rewardRecipient_) {
         comptroller = comptroller_;
-        fEtherAddress = fEtherAddress_;
+        fEtherAddress = cEtherAddress_;
         rewardRecipient = rewardRecipient_;
         comp = ERC20(comptroller_.getCompAddress());
 
@@ -58,7 +58,7 @@ contract FluxERC4626Factory is ERC4626Factory {
         IFERC20 fToken;
         for (uint256 i; i < numFTokens;) {
             fToken = allfTokens[i];
-            if (address(fToken) != fEtherAddress_) {
+            if (address(fToken) != cEtherAddress_) {
                 underlyingToFToken[fToken.underlying()] = fToken;
             }
 
