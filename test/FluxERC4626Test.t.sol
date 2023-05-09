@@ -1,52 +1,74 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import "erc4626-tests/ERC4626.test.sol";
 import "forge-std/Test.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {IFERC20} from "../src/vaults/utils/flux/IFERC20.sol";
+import {IComptroller} from "../src/vaults/utils/flux/IComptroller.sol";
+import "../src/vaults/FluxERC4626Factory.sol";
 
-// import {ERC20} from "solmate/tokens/ERC20.sol";
+contract FluxERC4626Test is Test {
+    uint256 public ethFork;
 
-import { IFERC20, ERC20 } from "../src/vaults/utils/flux/IFERC20.sol";
-import { IComptroller } from "../src/vaults/utils/flux/IComptroller.sol";
-import { FluxERC4626Factory } from "../src/vaults/FluxERC4626Factory.sol";
-import { FluxERC4626Wrapper } from "../src/vaults/FluxERC4626Wrapper.sol";
+    address public alice;
 
-contract ERC4626StdTest is Test, ERC4626Test {
+    string ETH_RPC_URL = vm.envString("MAINNET_RPC_URL");
 
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address public constant fUSDC = 0x465a5a630482f3abD6d3b84B39B29b07214d19e5;
-    address public constant COMPTROLLER = 0x95Af143a021DF745bc78e845b54591C53a8B3A51;
-    address public constant COMPOUND_ETHER = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
-    string constant MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-    uint256 public constant BLOCK_NO = 16558812;
+    FluxERC4626Wrapper public vault;
 
-    IFERC20 public fToken;
-    FluxERC4626Factory public factory;
-    FluxERC4626Wrapper public fluxERC4626;
-    
-    function setUp() public override {
-        console.log("Hello");
-        uint256 fork = vm.createFork(MAINNET_RPC_URL);
-        vm.selectFork(fork);
-        vm.rollFork(BLOCK_NO);
+    ERC20 public asset = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    IFERC20 public cToken = IFERC20(0x465a5a630482f3abD6d3b84B39B29b07214d19e5);
+    IComptroller public comptroller = IComptroller(0x95Af143a021DF745bc78e845b54591C53a8B3A51);
+    address public weth = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+    function setUp() public {
+        ethFork = vm.createFork(ETH_RPC_URL);
+        vm.selectFork(ethFork);
+        FluxERC4626Factory factory = new FluxERC4626Factory(comptroller, weth, msg.sender);
+        vault = FluxERC4626Wrapper(address(factory.createERC4626(ERC20(asset))));
+        //vault.setRoute(3000, weth, 3000);
+        console.log("vault", address(vault));
+        alice = address(0x1);
+        deal(address(asset), alice, 1000 ether);
+    }
 
-        console.log("Hello 2");
+    function testDepositWithdraw() public {
+        uint256 amount = 100 ether;
 
-        _underlying_ = USDC;
-        fToken = IFERC20(fUSDC);
-        factory = new FluxERC4626Factory(IComptroller(COMPTROLLER), COMPOUND_ETHER, msg.sender);
-        fluxERC4626 = FluxERC4626Wrapper(address(factory.createERC4626(ERC20(_underlying_))));
-        _vault_ = address(fluxERC4626);
-        _delta_ = 0;
-        _vaultMayBeEmpty = false;
-        // _unlimitedAmount = false;
+        vm.startPrank(alice);
 
+        uint256 aliceUnderlyingAmount = amount;
 
+        asset.approve(address(vault), aliceUnderlyingAmount);
+        assertEq(asset.allowance(alice, address(vault)), aliceUnderlyingAmount);
 
-        // _underlying_ = address(new MockERC20("Mock ERC20", "MERC20", 18));
-        // // _vault_ = address(new ERC4626Mock(MockERC20(__underlying__), "Mock ERC4626", "MERC4626"));
-        // _delta_ = 0;
-        // _vaultMayBeEmpty = false;
-        // _unlimitedAmount = false;
+        uint256 aliceShareAmount = vault.deposit(aliceUnderlyingAmount, alice);
+        uint256 aliceAssetsToWithdraw = vault.convertToAssets(aliceShareAmount);
+        assertEq(aliceUnderlyingAmount, aliceShareAmount);
+        assertEq(vault.totalSupply(), aliceShareAmount);
+        assertEq(vault.balanceOf(alice), aliceShareAmount);
+
+        vault.withdraw(aliceAssetsToWithdraw, alice, alice);
+    }
+
+    function testHarvest() public {
+        uint256 amount = 100 ether;
+
+        vm.startPrank(alice);
+
+        uint256 aliceUnderlyingAmount = amount;
+
+        asset.approve(address(vault), aliceUnderlyingAmount);
+        assertEq(asset.allowance(alice, address(vault)), aliceUnderlyingAmount);
+
+        uint256 aliceShareAmount = vault.deposit(aliceUnderlyingAmount, alice);
+        uint256 aliceAssetsToWithdraw = vault.convertToAssets(aliceShareAmount);
+        assertEq(aliceUnderlyingAmount, aliceShareAmount);
+        assertEq(vault.totalSupply(), aliceShareAmount);
+        assertEq(vault.balanceOf(alice), aliceShareAmount);
+        //vm.warp(block.timestamp + 10 days);
+        vm.roll(block.number + 100);
+        vault.harvest();
+        assertGt(vault.totalAssets(), aliceUnderlyingAmount);
+        vault.withdraw(aliceAssetsToWithdraw, alice, alice);
     }
 }
