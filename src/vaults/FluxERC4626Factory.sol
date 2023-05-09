@@ -13,41 +13,24 @@ import "forge-std/console.sol";
 /// @title FluxERC4626Factory
 /// @notice Factory for creating FluxERC4626 contracts
 contract FluxERC4626Factory is ERC4626Factory {
-    /// -----------------------------------------------------------------------
-    /// Errors
-    /// -----------------------------------------------------------------------
 
-    /// @notice Thrown when trying to deploy an FluxERC4626 vault using an asset without a fToken
-    error FluxERC4626Factory__fTokenNonexistent();
-    /// @notice Thrown when trying to set a variable to zero address
-    error ZeroAddressError();
+    // Immutable params
 
-    /// -----------------------------------------------------------------------
-    /// Immutable params
-    /// -----------------------------------------------------------------------
+    ERC20 public immutable comp; // The Flux token contract
+    address public immutable rewardRecipient; // The address that will receive the liquidity mining rewards (if any)
+    IComptroller public immutable comptroller; // The Compound comptroller contract
+    address internal immutable fEtherAddress; // The Compound cEther address
 
-    /// @notice The Flux token contract
-    ERC20 public immutable comp;
+    // Storage variables
 
-    /// @notice The address that will receive the liquidity mining rewards (if any)
-    address public immutable rewardRecipient;
+    mapping(ERC20 => IFERC20) public underlyingToFToken; // Maps underlying asset to the corresponding fToken
 
-    /// @notice The Compound comptroller contract
-    IComptroller public immutable comptroller;
+    // Errors
 
-    /// @notice The Compound cEther address
-    address internal immutable fEtherAddress;
+    error FluxERC4626Factory__fTokenNonexistent(); // Thrown when trying to deploy an FluxERC4626 vault using an asset without a fToken
+    error ZeroAddressError(); // Thrown when trying to set a variable to zero address
 
-    /// -----------------------------------------------------------------------
-    /// Storage variables
-    /// -----------------------------------------------------------------------
-
-    /// @notice Maps underlying asset to the corresponding fToken
-    mapping(ERC20 => IFERC20) public underlyingToFToken;
-
-    /// -----------------------------------------------------------------------
-    /// Constructor
-    /// -----------------------------------------------------------------------
+    // Constructor
 
     constructor(IComptroller comptroller_, address cEtherAddress_, address rewardRecipient_) {
         if(cEtherAddress_ == address(0) || rewardRecipient_ == address(0)) {
@@ -76,9 +59,7 @@ contract FluxERC4626Factory is ERC4626Factory {
         }
     }
 
-    /// -----------------------------------------------------------------------
-    /// External functions
-    /// -----------------------------------------------------------------------
+    // External functions
 
     /// @inheritdoc ERC4626Factory
     function createERC4626(ERC20 asset) external virtual override returns (ERC4626 vault) {

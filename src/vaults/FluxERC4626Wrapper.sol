@@ -11,65 +11,48 @@ import {IFERC20} from "./utils/flux/IFERC20.sol";
 import {IComptroller} from "./utils/flux/IComptroller.sol";
 
 import {DexSwap} from "./utils/swapUtils.sol";
+import "forge-std/console.sol";
 
 /// @title FluxERC4626Wrapper - Custom implementation of yield-daddy wrappers with flexible reinvesting logic
 /// Rationale: Forked protocols often implement custom functions and modules on top of forked code.
 /// Example: Staking systems. Very common in DeFi. Re-investing/Re-Staking rewards on the Vault level can be included in permissionless way.
 contract FluxERC4626Wrapper is ERC4626 {
-    /// -----------------------------------------------------------------------
-    /// Libraries usage
-    /// -----------------------------------------------------------------------
 
-    // using LibFlux for IFERC20;
+    // Libraries usage
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
 
-    /// -----------------------------------------------------------------------
-    /// Errors
-    /// -----------------------------------------------------------------------
-
-    /// @notice Thrown when a call to Flux returned an error.
-    /// @param errorCode The error code returned by Flux
-    error FluxERC4626__FluxError(uint256 errorCode);
-    /// @notice Thrown when trying to set a variable to zero address
-    error ZeroAddressError();
-
-    /// -----------------------------------------------------------------------
-    /// Constants
-    /// -----------------------------------------------------------------------
-
-    uint256 internal constant NO_ERROR = 0;
-
-    /// -----------------------------------------------------------------------
-    /// Immutable params
-    /// -----------------------------------------------------------------------
-
-    /// @notice Access Control for harvest() route
-    address public immutable manager;
-
-    /// @notice The FLUX-like token contract
-    ERC20 public immutable reward;
-
-    /// @notice The Flux fToken contract
-    IFERC20 public immutable fToken;
-
-    /// @notice The Flux comptroller contract
-    IComptroller public immutable comptroller;
-
-    /// @notice Pointer to SwapInfo
-    SwapInfo public swapInfo;
-
-    /// Compact struct to make two swaps (PancakeSwap on BSC)
-    /// A => B (using pair1) then B => asset (of Wrapper) (using pair2)
+    // Compact struct to make two swaps (PancakeSwap on BSC)
+    // A => B (using pair1) then B => asset (of Wrapper) (using pair2)
     struct SwapInfo {
         address token;
         address pair1;
         address pair2;
     }
 
-    /// -----------------------------------------------------------------------
-    /// Constructor
-    /// -----------------------------------------------------------------------
+    // Constants
+
+    uint256 internal constant NO_ERROR = 0;
+
+    // Immutable params
+
+    address public immutable manager; // Access Control for harvest() route
+    ERC20 public immutable reward; // The FLUX-like token contract
+    IFERC20 public immutable fToken; // The Flux fToken contract
+    IComptroller public immutable comptroller; // The Flux comptroller contract
+
+    // Storage variables
+
+    SwapInfo public swapInfo; // Pointer to SwapInfo
+
+    // Errors
+
+    /// @param errorCode The error code returned by Flux
+    error FluxERC4626__FluxError(uint256 errorCode); // Thrown when a call to Flux returned an error.
+    error ZeroAddressError(); // Thrown when trying to set a variable to zero address.
+    error CallerNotOwner(address caller); // Thrown when caller is not owner.
+
+    // Constructor
 
     constructor(
         ERC20 asset_, // underlying
@@ -87,16 +70,16 @@ contract FluxERC4626Wrapper is ERC4626 {
         manager = manager_;
     }
 
-    /// -----------------------------------------------------------------------
-    /// Flux liquidity mining
-    /// -----------------------------------------------------------------------
+    // Flux liquidity mining
 
     function setRoute(
         address token,
         address pair1,
         address pair2
     ) external {
-        require(msg.sender == manager, "onlyOwner");
+        if(msg.sender != owner) {
+            revert CallerNotOwner(msg.sender);
+        }
         swapInfo = SwapInfo(token, pair1, pair2);
         ERC20(reward).approve(swapInfo.pair1, type(uint256).max); /// max approve
         ERC20(swapInfo.token).approve(swapInfo.pair2, type(uint256).max); /// max approve
@@ -106,13 +89,19 @@ contract FluxERC4626Wrapper is ERC4626 {
     /// Calling harvest() claims COMP-Fork token through direct Pair swap for best control and lowest cost
     /// harvest() can be called by anybody. ideally this function should be adjusted per needs (e.g add fee for harvesting)
     function harvest() external {
+        console.log("Harvest called");
         IFERC20[] memory fTokens = new IFERC20[](1);
         fTokens[0] = fToken;
+        console.log("Before claim comp");
         comptroller.claimComp(address(this), fTokens);
-        reward.safeTransfer(address(this), reward.balanceOf(address(this)));
+        console.log("Before reward transfer");
+        console.log("reward.balanceOf(address(this))",reward.balanceOf(address(this)));
+        // reward.safeTransfer(address(this), reward.balanceOf(address(this)));
 
         uint256 earned = ERC20(reward).balanceOf(address(this));
         address rewardToken = address(reward);
+
+        console.log("Before swap process start");
 
         /// If only one swap needed (high liquidity pair) - set SwapInfo.token0/token/pair2 to 0x
         if (swapInfo.token == address(asset)) {
@@ -138,14 +127,12 @@ contract FluxERC4626Wrapper is ERC4626 {
                 swapInfo.pair2 /// pairToken (pool)
             );
         }
+        console.log("Before after withdraw");
 
         afterDeposit(asset.balanceOf(address(this)), 0);
     }
 
-    /// -----------------------------------------------------------------------
     /// ERC4626 overrides
-    /// We can't inherit directly from Yield-daddy because of rewardClaim lock
-    /// -----------------------------------------------------------------------
 
     function totalAssets() public view virtual override returns (uint256) {
         return
@@ -158,10 +145,7 @@ contract FluxERC4626Wrapper is ERC4626 {
         uint256 assets,
         uint256 /*positions*/
     ) internal virtual override {
-        /// -----------------------------------------------------------------------
-        /// Withdraw assets from Flux
-        /// -----------------------------------------------------------------------
-
+        // Withdraw assets from Flux
         uint256 errorCode = fToken.redeemUnderlying(assets);
         if (errorCode != NO_ERROR) {
             revert FluxERC4626__FluxError(errorCode);
@@ -172,10 +156,7 @@ contract FluxERC4626Wrapper is ERC4626 {
         uint256 assets,
         uint256 /*shares*/
     ) internal virtual override {
-        /// -----------------------------------------------------------------------
-        /// Deposit assets into Flux
-        /// -----------------------------------------------------------------------
-
+        // Deposit assets into Flux
         // approve to fToken
         asset.safeApprove(address(fToken), assets);
 
@@ -209,9 +190,7 @@ contract FluxERC4626Wrapper is ERC4626 {
         return cashInShares < shareBalance ? cashInShares : shareBalance;
     }
 
-    /// -----------------------------------------------------------------------
-    /// ERC20 metadata generation
-    /// -----------------------------------------------------------------------
+    // ERC20 metadata generation
 
     function _vaultName(ERC20 asset_)
         internal
