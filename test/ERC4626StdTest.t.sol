@@ -17,8 +17,8 @@ contract ERC4626StdTest is ERC4626Test {
     address public constant fUSDC = 0x465a5a630482f3abD6d3b84B39B29b07214d19e5;
     address public constant COMPTROLLER =
         0x95Af143a021DF745bc78e845b54591C53a8B3A51;
-    address public constant COMPOUND_ETHER =
-        0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+    // address public constant COMPOUND_ETHER =
+    //     0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
     string public MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
     uint256 public constant BLOCK_NO = 16558812;
 
@@ -33,7 +33,6 @@ contract ERC4626StdTest is ERC4626Test {
         fToken = IFERC20(fUSDC);
         factory = new FluxERC4626Factory(
             IComptroller(COMPTROLLER),
-            COMPOUND_ETHER,
             msg.sender
         );
         fluxERC4626 = FluxERC4626Wrapper(

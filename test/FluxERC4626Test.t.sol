@@ -25,7 +25,6 @@ contract FluxERC4626Test is Test {
         vm.selectFork(ethFork);
         FluxERC4626Factory factory = new FluxERC4626Factory(
             comptroller,
-            weth,
             msg.sender
         );
         vault = FluxERC4626Wrapper(

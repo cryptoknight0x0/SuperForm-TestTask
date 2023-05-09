@@ -8,10 +8,9 @@ import {ERC4626Factory} from "./utils/ERC4626Factory.sol";
 /// @notice Factory for creating FluxERC4626 contracts
 contract FluxERC4626Factory is ERC4626Factory {
     // Immutable params
-    ERC20 public immutable comp; // The Flux token contract
+    ERC20 public immutable flux; // The Flux comptroller reward contract
     address public immutable rewardRecipient; // The address that will receive the liquidity mining rewards (if any)
-    IComptroller public immutable comptroller; // The Compound comptroller contract
-    address internal immutable cEtherAddress; // The Compound cEther address
+    IComptroller public immutable comptroller; // The Flux comptroller contract
 
     // Storage variables
     mapping(ERC20 => IFERC20) public underlyingToFToken; // Maps underlying asset to the corresponding fToken
@@ -23,23 +22,20 @@ contract FluxERC4626Factory is ERC4626Factory {
     /**
      * @dev Constructor function for the contract.
      * @param comptroller_ The address of the Comptroller contract.
-     * @param cEtherAddress_ The address of the cEther contract.
      * @param rewardRecipient_ The address of the reward recipient.
-     * @notice Initializes the variables comptroller, cEtherAddress, rewardRecipient, and comp.
+     * @notice Initializes the variables comptroller, rewardRecipient, and comp.
      * @dev Throws a ZeroAddressError if either cEtherAddress_ or rewardRecipient_ is the zero address.
      */
     constructor(
         IComptroller comptroller_,
-        address cEtherAddress_,
         address rewardRecipient_
     ) {
-        if (cEtherAddress_ == address(0) || rewardRecipient_ == address(0)) {
+        if (rewardRecipient_ == address(0)) {
             revert ZeroAddressError();
         }
         comptroller = comptroller_;
-        cEtherAddress = cEtherAddress_;
         rewardRecipient = rewardRecipient_;
-        comp = ERC20(comptroller_.getCompAddress());
+        flux = ERC20(comptroller_.getCompAddress());
 
         // initialize underlyingToFToken
         IFERC20[] memory allfTokens = comptroller_.getAllMarkets();
@@ -47,9 +43,7 @@ contract FluxERC4626Factory is ERC4626Factory {
         IFERC20 fToken;
         for (uint256 i; i < numFTokens; ) {
             fToken = allfTokens[i];
-            if (address(fToken) != cEtherAddress_) {
-                underlyingToFToken[fToken.underlying()] = fToken;
-            }
+            underlyingToFToken[fToken.underlying()] = fToken;
 
             unchecked {
                 ++i;
@@ -79,7 +73,7 @@ contract FluxERC4626Factory is ERC4626Factory {
 
         vault = new FluxERC4626Wrapper{salt: bytes32(0)}(
             asset,
-            comp,
+            flux,
             fToken,
             comptroller,
             rewardRecipient
@@ -105,7 +99,7 @@ contract FluxERC4626Factory is ERC4626Factory {
                         // Constructor arguments:
                         abi.encode(
                             asset,
-                            comp,
+                            flux,
                             underlyingToFToken[asset],
                             rewardRecipient,
                             comptroller
@@ -118,7 +112,7 @@ contract FluxERC4626Factory is ERC4626Factory {
 
     /**
      * @notice Updates the underlyingToFToken mapping in order to support newly added fTokens
-     * @dev This is needed because Compound doesn't have an onchain registry of fTokens corresponding to underlying assets.
+     * @dev This is needed because Flux doesn't have an onchain registry of fTokens corresponding to underlying assets.
      * @param newFTokenIndices The indices of the new fTokens to register in the comptroller.allMarkets array
      */
     function updateUnderlyingToFToken(
@@ -130,9 +124,7 @@ contract FluxERC4626Factory is ERC4626Factory {
         for (uint256 i; i < numFTokens; ) {
             index = newFTokenIndices[i];
             fToken = comptroller.allMarkets(index);
-            if (address(fToken) != cEtherAddress) {
-                underlyingToFToken[fToken.underlying()] = fToken;
-            }
+            underlyingToFToken[fToken.underlying()] = fToken;
 
             unchecked {
                 ++i;

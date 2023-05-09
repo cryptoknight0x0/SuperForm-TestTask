@@ -17,14 +17,6 @@ contract FluxERC4626Wrapper is ERC4626 {
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
 
-    /// Compact struct to make two swaps (PancakeSwap on BSC)
-    /// A => B (using pair1) then B => asset (of Wrapper) (using pair2)
-    struct swapInfo {
-        address token;
-        address pair1;
-        address pair2;
-    }
-
     // Constants
     uint256 internal constant NO_ERROR = 0;
     ISwapRouter public immutable SWAP_ROUTER =
@@ -96,7 +88,7 @@ contract FluxERC4626Wrapper is ERC4626 {
         ERC20(reward).approve(address(SWAP_ROUTER), type(uint256).max); /// max approve
     }
 
-    /// @notice Claims liquidity mining rewards from Compound and performs low-lvl swap with instant reinvesting
+    /// @notice Claims liquidity mining rewards from Flux and performs low-lvl swap with instant reinvesting
     /// Calling harvest() claims COMP-Fork token through direct Pair swap for best control and lowest cost
     /// harvest() can be called by anybody. ideally this function should be adjusted per needs (e.g add fee for harvesting)
     function harvest(uint256 minAmountOut_) external {
