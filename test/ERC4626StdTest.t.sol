@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
-import { ERC4626 } from "solmate/mixins/ERC4626.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC4626} from "solmate/mixins/ERC4626.sol";
 import "erc4626-tests/ERC4626.test.sol";
 import "../src/vaults/FluxERC4626Factory.sol";
 
@@ -15,9 +15,11 @@ contract ERC4626StdTest is ERC4626Test {
 
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public constant fUSDC = 0x465a5a630482f3abD6d3b84B39B29b07214d19e5;
-    address public constant COMPTROLLER = 0x95Af143a021DF745bc78e845b54591C53a8B3A51;
-    address public constant COMPOUND_ETHER = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
-    string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
+    address public constant COMPTROLLER =
+        0x95Af143a021DF745bc78e845b54591C53a8B3A51;
+    address public constant COMPOUND_ETHER =
+        0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+    string public MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
     uint256 public constant BLOCK_NO = 16558812;
 
     IFERC20 public fToken;
@@ -29,8 +31,14 @@ contract ERC4626StdTest is ERC4626Test {
         fork();
         _underlying_ = USDC;
         fToken = IFERC20(fUSDC);
-        factory = new FluxERC4626Factory(IComptroller(COMPTROLLER), COMPOUND_ETHER);
-        fluxERC4626 = FluxERC4626Wrapper(address(factory.createERC4626(ERC20(_underlying_))));
+        factory = new FluxERC4626Factory(
+            IComptroller(COMPTROLLER),
+            COMPOUND_ETHER,
+            msg.sender
+        );
+        fluxERC4626 = FluxERC4626Wrapper(
+            address(factory.createERC4626(ERC20(_underlying_)))
+        );
         _vault_ = address(fluxERC4626);
         userWithAssets = 0x7066fb331a6932563369eE8cbd297856F75A3Bd5;
         _underlying_ = address(ERC4626(_vault_).asset());
@@ -48,7 +56,10 @@ contract ERC4626StdTest is ERC4626Test {
             // init vault
             vm.startPrank(userWithAssets);
             ERC20(_underlying_).approve(_vault_, type(uint256).max);
-            IERC4626(_vault_).deposit(1 * 10**ERC20(_underlying_).decimals(), userWithAssets);
+            IERC4626(_vault_).deposit(
+                1 * 10 ** ERC20(_underlying_).decimals(),
+                userWithAssets
+            );
             vm.stopPrank();
 
             // user asset balance
@@ -94,6 +105,6 @@ contract ERC4626StdTest is ERC4626Test {
     }
 
     function fork() internal {
-        vm.createSelectFork(MAINNET_RPC_URL, BLOCK_NO);  // create a fork
+        vm.createSelectFork(MAINNET_RPC_URL, BLOCK_NO); // create a fork
     }
 }

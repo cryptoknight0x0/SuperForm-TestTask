@@ -24,6 +24,7 @@ To run the tests run the bash script
 ```
 
 To explicitly run tests
+
 ```properties
 forge tests -vvv
 ```
