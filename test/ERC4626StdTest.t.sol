@@ -32,7 +32,6 @@ contract ERC4626StdTest is ERC4626Test {
         factory = new FluxERC4626Factory(IComptroller(COMPTROLLER), COMPOUND_ETHER);
         fluxERC4626 = FluxERC4626Wrapper(address(factory.createERC4626(ERC20(_underlying_))));
         _vault_ = address(fluxERC4626);
-        // userWithAssets = 0x8D70A43189F036047113BCD10201184D6eDdDa01;
         userWithAssets = 0x7066fb331a6932563369eE8cbd297856F75A3Bd5;
         _underlying_ = address(ERC4626(_vault_).asset());
         _delta_ = 10;

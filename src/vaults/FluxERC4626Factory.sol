@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-// import {ERC4626} from "solmate/mixins/ERC4626.sol";
-
-// import {IFERC20, ERC20} from "./utils/flux/IFERC20.sol";
 import {FluxERC4626Wrapper, IFERC20, ERC20, ERC4626, IComptroller} from "./FluxERC4626Wrapper.sol";
-// import {IComptroller} from "./utils/flux/IComptroller.sol";
 import {ERC4626Factory} from "./utils/ERC4626Factory.sol";
 
 /// @title FluxERC4626Factory
