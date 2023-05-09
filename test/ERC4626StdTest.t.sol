@@ -17,7 +17,8 @@ contract ERC4626StdTest is ERC4626Test {
     address public constant fUSDC = 0x465a5a630482f3abD6d3b84B39B29b07214d19e5;
     address public constant COMPTROLLER = 0x95Af143a021DF745bc78e845b54591C53a8B3A51;
     address public constant COMPOUND_ETHER = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
-    // uint256 public constant BLOCK_NO = 16558812;
+    string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
+    uint256 public constant BLOCK_NO = 16558812;
 
     IFERC20 public fToken;
     FluxERC4626Factory public factory;
@@ -28,7 +29,7 @@ contract ERC4626StdTest is ERC4626Test {
         fork();
         _underlying_ = USDC;
         fToken = IFERC20(fUSDC);
-        factory = new FluxERC4626Factory(IComptroller(COMPTROLLER), COMPOUND_ETHER, msg.sender);
+        factory = new FluxERC4626Factory(IComptroller(COMPTROLLER), COMPOUND_ETHER);
         fluxERC4626 = FluxERC4626Wrapper(address(factory.createERC4626(ERC20(_underlying_))));
         _vault_ = address(fluxERC4626);
         // userWithAssets = 0x8D70A43189F036047113BCD10201184D6eDdDa01;
@@ -45,20 +46,15 @@ contract ERC4626StdTest is ERC4626Test {
         uint256 maxAssetPerUser;
 
         if (userWithAssets != address(0)) {
-            console.log("Inside main setup");
             // init vault
             vm.startPrank(userWithAssets);
             ERC20(_underlying_).approve(_vault_, type(uint256).max);
-            console.log("Before deposit");
             IERC4626(_vault_).deposit(1 * 10**ERC20(_underlying_).decimals(), userWithAssets);
             vm.stopPrank();
-
-            console.log("After deposit");
 
             // user asset balance
             uint256 assetBal = ERC20(_underlying_).balanceOf(userWithAssets);
             maxAssetPerUser = assetBal / 2 / N;
-            console.log("Setup happend");
         }
 
         // setup initial shares and assets for individual users
@@ -99,6 +95,6 @@ contract ERC4626StdTest is ERC4626Test {
     }
 
     function fork() internal {
-        vm.createSelectFork("https://eth-mainnet.g.alchemy.com/v2/2NWsUiJppRQbTLKeiXvu0l6JwTTOnKp7",16558812);  // create a fork
+        vm.createSelectFork(MAINNET_RPC_URL, BLOCK_NO);  // create a fork
     }
 }

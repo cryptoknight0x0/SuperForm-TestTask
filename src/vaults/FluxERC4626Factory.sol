@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {ERC4626} from "solmate/mixins/ERC4626.sol";
+// import {ERC4626} from "solmate/mixins/ERC4626.sol";
 
-import {IFERC20} from "./utils/flux/IFERC20.sol";
-import {FluxERC4626Wrapper} from "./FluxERC4626Wrapper.sol";
-import {IComptroller} from "./utils/flux/IComptroller.sol";
+// import {IFERC20, ERC20} from "./utils/flux/IFERC20.sol";
+import {FluxERC4626Wrapper, IFERC20, ERC20, ERC4626, IComptroller} from "./FluxERC4626Wrapper.sol";
+// import {IComptroller} from "./utils/flux/IComptroller.sol";
 import {ERC4626Factory} from "./utils/ERC4626Factory.sol";
-import "forge-std/console.sol";
 
 /// @title FluxERC4626Factory
 /// @notice Factory for creating FluxERC4626 contracts
@@ -17,9 +15,8 @@ contract FluxERC4626Factory is ERC4626Factory {
     // Immutable params
 
     ERC20 public immutable comp; // The Flux token contract
-    address public immutable rewardRecipient; // The address that will receive the liquidity mining rewards (if any)
     IComptroller public immutable comptroller; // The Compound comptroller contract
-    address internal immutable fEtherAddress; // The Compound cEther address
+    address internal immutable cEtherAddress; // The Compound cEther address
 
     // Storage variables
 
@@ -30,25 +27,28 @@ contract FluxERC4626Factory is ERC4626Factory {
     error FluxERC4626Factory__fTokenNonexistent(); // Thrown when trying to deploy an FluxERC4626 vault using an asset without a fToken
     error ZeroAddressError(); // Thrown when trying to set a variable to zero address
 
-    // Constructor
 
-    constructor(IComptroller comptroller_, address cEtherAddress_, address rewardRecipient_) {
-        if(cEtherAddress_ == address(0) || rewardRecipient_ == address(0)) {
+    /**
+    * @dev Constructor function that initializes the Comptroller contract and the address of cETH.
+    * @param comptroller_ The address of the Comptroller contract.
+    * @param cEtherAddress_ The address of the cETH contract.
+    * @notice If cEtherAddress_ is the zero address, it will revert with a ZeroAddressError.
+    * @notice The function will also initialize the underlyingToFToken mapping using getAllMarkets function of Comptroller contract.
+    */
+    constructor(IComptroller comptroller_, address cEtherAddress_) {
+        if(cEtherAddress_ == address(0)) {
             revert ZeroAddressError();
         }
         comptroller = comptroller_;
-        fEtherAddress = cEtherAddress_;
-        rewardRecipient = rewardRecipient_;
+        cEtherAddress = cEtherAddress_;
         comp = ERC20(comptroller_.getCompAddress());
 
         // initialize underlyingToFToken
         IFERC20[] memory allfTokens = comptroller_.getAllMarkets();
         uint256 numFTokens = allfTokens.length;
-        console.log("Length is", numFTokens);
         IFERC20 fToken;
         for (uint256 i; i < numFTokens;) {
             fToken = allfTokens[i];
-            console.log("F token is", address(fToken));
             if (address(fToken) != cEtherAddress_) {
                 underlyingToFToken[fToken.underlying()] = fToken;
             }
@@ -61,19 +61,33 @@ contract FluxERC4626Factory is ERC4626Factory {
 
     // External functions
 
-    /// @inheritdoc ERC4626Factory
+    /**
+    * @notice Creates a new instance of an ERC4626 vault for a given ERC20 asset.
+    * @dev The vault is created by deploying a new instance of FluxERC4626Wrapper contract.
+    * @param asset The ERC20 asset for which a vault is being created.
+    * @return vault The newly created instance of the ERC4626 vault.
+    * @dev The vault will be created using the underlying fToken associated with the asset.
+    * @dev If the underlying fToken does not exist, the function will revert.
+    * @dev The vault is created with a salt value of 0 to ensure uniqueness.
+    * @dev Emits a CreateERC4626 event with details of the asset and vault.
+    */
     function createERC4626(ERC20 asset) external virtual override returns (ERC4626 vault) {
         IFERC20 fToken = underlyingToFToken[asset];
         if (address(fToken) == address(0)) {
             revert FluxERC4626Factory__fTokenNonexistent();
         }
 
-        vault = new FluxERC4626Wrapper{salt: bytes32(0)}(asset, comp, fToken, comptroller, rewardRecipient);
+        vault = new FluxERC4626Wrapper{salt: bytes32(0)}(asset, fToken, comptroller);
 
         emit CreateERC4626(asset, vault);
     }
 
-    /// @inheritdoc ERC4626Factory
+    /**
+    * @dev Computes the address of the ERC4626 vault for the given ERC20 asset using create2.
+    * @param asset The ERC20 asset for which the ERC4626 vault address is being computed.
+    * @return vault The computed ERC4626 vault address.
+    * This function computes the address of the ERC4626 vault for a given ERC20 asset using the create2 function, which allows for deterministic deployment of contracts. The computed address is based on the keccak256 hash of the deployment bytecode of the FluxERC4626Wrapper contract and the constructor arguments, which include the asset, the underlying fToken address, and the Comptroller address.
+    */
     function computeERC4626Address(ERC20 asset) external view virtual override returns (ERC4626 vault) {
         vault = ERC4626(
             _computeCreate2Address(
@@ -82,16 +96,18 @@ contract FluxERC4626Factory is ERC4626Factory {
                         // Deployment bytecode:
                         type(FluxERC4626Wrapper).creationCode,
                         // Constructor arguments:
-                        abi.encode(asset, comp, underlyingToFToken[asset], rewardRecipient, comptroller)
+                        abi.encode(asset, underlyingToFToken[asset], comptroller)
                     )
                 )
             )
         );
     }
 
-    /// @notice Updates the underlyingToFToken mapping in order to support newly added fTokens
-    /// @dev This is needed because Compound doesn't have an onchain registry of fTokens corresponding to underlying assets.
-    /// @param newFTokenIndices The indices of the new fTokens to register in the comptroller.allMarkets array
+    /** 
+    * @notice Updates the underlyingToFToken mapping in order to support newly added fTokens
+    * @dev This is needed because Compound doesn't have an onchain registry of fTokens corresponding to underlying assets.
+    * @param newFTokenIndices The indices of the new fTokens to register in the comptroller.allMarkets array
+    */
     function updateUnderlyingToFToken(uint256[] calldata newFTokenIndices) external {
         uint256 numFTokens = newFTokenIndices.length;
         IFERC20 fToken;
@@ -99,7 +115,7 @@ contract FluxERC4626Factory is ERC4626Factory {
         for (uint256 i; i < numFTokens;) {
             index = newFTokenIndices[i];
             fToken = comptroller.allMarkets(index);
-            if (address(fToken) != fEtherAddress) {
+            if (address(fToken) != cEtherAddress) {
                 underlyingToFToken[fToken.underlying()] = fToken;
             }
 
