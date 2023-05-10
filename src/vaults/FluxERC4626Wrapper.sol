@@ -19,8 +19,7 @@ contract FluxERC4626Wrapper is ERC4626 {
 
     // Constants
     uint256 internal constant NO_ERROR = 0;
-    ISwapRouter public immutable SWAP_ROUTER =
-        ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+    ISwapRouter public immutable SWAP_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     // Immutable params
     address private _manager; // Access Control for harvest() route
@@ -59,7 +58,13 @@ contract FluxERC4626Wrapper is ERC4626 {
     * @param comptroller_ The contract that manages the minting and redeeming of fTokens.
     * @param manager_ The address of the manager who has the authority to modify the vault parameters.
     */
-    function initialize(ERC20 asset_, ERC20 reward_, IFERC20 fToken_, IComptroller comptroller_, address manager_) external initializer {
+    function initialize(
+    ERC20 asset_,
+    ERC20 reward_,
+    IFERC20 fToken_,
+    IComptroller comptroller_,
+    address manager_
+    ) external initializer {
         __ERC4626_init(asset_, _vaultName(asset_), _vaultSymbol(asset_));
         _reward = reward_;
         _fToken = fToken_;
@@ -69,6 +74,7 @@ contract FluxERC4626Wrapper is ERC4626 {
         }
         _manager = manager_;
     }
+
 
     /// @notice sets the swap path for reinvesting rewards
     /// @param poolFee1_ fee for first swap
