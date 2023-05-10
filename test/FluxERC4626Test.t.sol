@@ -27,8 +27,10 @@ contract FluxERC4626Test is Test {
             comptroller,
             msg.sender
         );
+        FluxERC4626Wrapper vaultImpl = new FluxERC4626Wrapper();
+        console.log("Created impl");
         vault = FluxERC4626Wrapper(
-            address(factory.createERC4626(ERC20(asset)))
+            address(factory.createERC4626(ERC20(asset), address(vaultImpl)))
         );
         vm.prank(msg.sender);
         vault.setRoute(3000, weth, 3000);

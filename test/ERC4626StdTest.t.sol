@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {ERC4626} from "solmate/mixins/ERC4626.sol";
+import {ERC20 as SolmateERC20} from "solmate/tokens/ERC20.sol";
+// import {ERC4626} from "solmate/mixins/ERC4626.sol";
 import "erc4626-tests/ERC4626.test.sol";
 import "../src/vaults/FluxERC4626Factory.sol";
 
@@ -35,8 +35,9 @@ contract ERC4626StdTest is ERC4626Test {
             IComptroller(COMPTROLLER),
             msg.sender
         );
+        FluxERC4626Wrapper vaultImpl = new FluxERC4626Wrapper();
         fluxERC4626 = FluxERC4626Wrapper(
-            address(factory.createERC4626(ERC20(_underlying_)))
+            address(factory.createERC4626(ERC20(_underlying_), address(vaultImpl)))
         );
         _vault_ = address(fluxERC4626);
         userWithAssets = 0x7066fb331a6932563369eE8cbd297856F75A3Bd5;
