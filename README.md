@@ -17,6 +17,7 @@ chmod +x ./setup.sh
 
 ## Usage
 
+**Note** Create a .env file and add a Alchemy Mainnet RPC Url before running script
 To run the tests run the bash script
 
 ```properties
@@ -33,7 +34,7 @@ forge test -vvv --gas-report
 
 1. Drawing inspiration from the existing wrappers for [Compound](https://github.com/superform-xyz/super-vaults/blob/main/src/compound/CompoundV2ERC4626Wrapper.sol) from Superform and from [Yield Daddy](https://github.com/timeless-fi/yield-daddy/tree/main/src/compound), a wrapper for Flux's fToken is implemented.
 For the deployemnt of vault I've used OpenZeppelin's [Clone](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/proxy/Clones.sol) library, which aids in minimal proxy deployment. This approach is achieved through the FluxERC4626Factory, a contract that deploys deterministic clones of vault with the salt  as the underlying asset's address ensuring that multiple vaults are not deployed for the same asset.
-I also used Minimal proxy to reduce the deployment cost greatly. To use Minimal proxy I had to fork Solmates version of ERC20 and ERC4626 and add initializer functions to make it upgradeable with the help of OpenZeppelin's [Initializable](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/proxy/utils/Initializable.sol)
+I also used Minimal proxy to reduce the deployment cost greatly. To use Minimal proxy I had to fork Solmates version of ERC20 and ERC4626 and add initializer functions to make it upgradeable with the help of OpenZeppelin's [Initializable](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/proxy/utils/Initializable.sol) contract.
 
 In Below Image you can see that cost of deployment using createERC4626 is reduced by approximately `85%` in comparision to a normal deployment.
 ![Gas Costs](/images/Gas.png)
