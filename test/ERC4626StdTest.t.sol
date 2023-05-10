@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.18;
 
 import {ERC20 as SolmateERC20} from "solmate/tokens/ERC20.sol";
-// import {ERC4626} from "solmate/mixins/ERC4626.sol";
 import "erc4626-tests/ERC4626.test.sol";
 import "../src/vaults/FluxERC4626Factory.sol";
 
@@ -13,32 +12,24 @@ import "../src/vaults/FluxERC4626Factory.sol";
 contract ERC4626StdTest is ERC4626Test {
     address public userWithAssets;
 
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address public constant fUSDC = 0x465a5a630482f3abD6d3b84B39B29b07214d19e5;
-    address public constant COMPTROLLER =
-        0x95Af143a021DF745bc78e845b54591C53a8B3A51;
-    // address public constant COMPOUND_ETHER =
-    //     0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+    address public UNDERLYING = vm.envAddress("UNDERLYING");
+    address public COMPTROLLER = vm.envAddress("COMPTROLLER");
     string public MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-    uint256 public constant BLOCK_NO = 16558812;
+    uint256 public BLOCK_NO = vm.envUint("BLOCK_NO");
 
-    IFERC20 public fToken;
     FluxERC4626Factory public factory;
     FluxERC4626Wrapper public fluxERC4626;
     bool _needsRolling;
 
     function setUp() public override {
         fork();
-        _underlying_ = USDC;
-        fToken = IFERC20(fUSDC);
+        _underlying_ = UNDERLYING;
         factory = new FluxERC4626Factory(
             IComptroller(COMPTROLLER),
             msg.sender
         );
         FluxERC4626Wrapper vaultImpl = new FluxERC4626Wrapper();
-        fluxERC4626 = FluxERC4626Wrapper(
-            address(factory.createERC4626(ERC20(_underlying_), address(vaultImpl)))
-        );
+        fluxERC4626 = factory.createERC4626(ERC20(UNDERLYING), address(vaultImpl));
         _vault_ = address(fluxERC4626);
         userWithAssets = 0x7066fb331a6932563369eE8cbd297856F75A3Bd5;
         _underlying_ = address(ERC4626(_vault_).asset());

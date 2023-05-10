@@ -2,29 +2,27 @@
 pragma solidity 0.8.18;
 
 import "forge-std/Test.sol";
-import {IFERC20, ERC20} from "../src/vaults/utils/flux/IFERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IComptroller} from "../src/vaults/utils/flux/IComptroller.sol";
 import "../src/vaults/FluxERC4626Factory.sol";
 
 contract FluxERC4626Test is Test {
     uint256 public ethFork;
-
     address public alice;
-
-    string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-
+    ERC20 public asset;
     FluxERC4626Wrapper public vault;
 
-    ERC20 public asset = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-    IComptroller public comptroller =
-        IComptroller(0x95Af143a021DF745bc78e845b54591C53a8B3A51);
+    string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
+    address public UNDERLYING = vm.envAddress("UNDERLYING");
+    address public COMPTROLLER = vm.envAddress("COMPTROLLER");
     address public weth = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
 
     function setUp() public {
         ethFork = vm.createFork(MAINNET_RPC_URL);
         vm.selectFork(ethFork);
+        asset =  ERC20(UNDERLYING);
         FluxERC4626Factory factory = new FluxERC4626Factory(
-            comptroller,
+            IComptroller(COMPTROLLER),
             msg.sender
         );
         FluxERC4626Wrapper vaultImpl = new FluxERC4626Wrapper();
